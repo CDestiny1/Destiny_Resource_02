@@ -1,0 +1,30 @@
+DESTINY DATABASE MANAGER - VERSION WEB (Android / cualquier navegador)
+=====================================================================
+
+Es el mismo programa (mismo codigo Python de database.py, archive.py y team_assets.py),
+pero el motor Python corre DENTRO del navegador (Pyodide). No necesita Termux,
+ni servidor, ni instalar nada. Tus archivos CPK nunca salen del telefono.
+
+COMO USARLO EN EL CELULAR
+1) Sube esta carpeta COMPLETA a un hosting estatico gratuito. Opciones:
+   - GitHub Pages (crear repositorio, subir los archivos, Settings > Pages)
+   - Cloudflare Pages / Netlify (subir la carpeta)
+   (No se puede abrir index.html directamente desde el administrador de archivos:
+    Chrome bloquea los workers en file://. Por eso hace falta alojarlo en una URL https.)
+2) Abre la URL en Chrome para Android. La PRIMERA vez necesita internet
+   (descarga el motor Python, unos 10-15 MB). Despues queda guardado y abre sin internet.
+3) Menu de Chrome > "Instalar app" / "Agregar a pantalla de inicio": queda como app.
+4) Carga tu Destiny_Resource_02.cpk, edita y usa Exportar: se descarga el _EDITADO.cpk.
+
+LIMITES EN CELULAR
+- La memoria del navegador es limitada: el CPK de la database (limite 64 MB) va bien;
+  el CPK de kits muy grande (cientos de MB) puede fallar en telefonos con poca RAM.
+- Elegir "carpeta de destino" de kits solo existe en PC (igual que en la version original).
+- Chrome Android no deja elegir carpetas completas: para cargar kits se seleccionan archivos sueltos.
+- Si cierras la pestana sin exportar, los cambios se pierden (igual que en la version de PC).
+
+ARCHIVOS
+ index.html, static/      interfaz original (solo se cambio como habla con el motor)
+ py/                      codigo Python original + bridge.py (reemplaza a server.py)
+ pyworker.js, bridge.js   cargan Pyodide y conectan la interfaz con Python
+ sw.js, manifest, icons/  modo offline e instalacion como app

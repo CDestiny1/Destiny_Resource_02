@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Destiny Database Manager</title>
+  <meta name="theme-color" content="#ff5fa2">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="static/app.css">
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand" aria-label="DFP Database Manager">
+      <span class="brand-mark">DFP</span>
+      <span class="brand-copy"><b>DATABASE</b><small>MANAGER · PES 2021</small></span>
+    </div>
+    <nav class="top-actions" aria-label="Acciones principales">
+      <button class="action primary" id="loadBtn"><span>＋</span>CARGAR CPK</button>
+      <button class="action" id="saveBtn" disabled><span>✓</span>GUARDAR JUGADOR</button>
+      <button class="action" id="createBtn" disabled><span>◇</span>NUEVO</button>
+      <button class="action" id="lineupBtn" disabled><span>▦</span>ALINEACIONES</button>
+      <button class="action" id="teamsBtn" disabled><span>⬡</span>EQUIPOS Y KITS</button>
+      <button class="action" id="importTeamBtn" disabled><span>⇲</span>IMPORTAR EQUIPO</button>
+      <button class="action" id="replaceBtn" disabled><span>⇄</span>REEMPLAZAR SLOT</button>
+      <button class="action" id="undoBtn" disabled><span>↶</span>DESHACER</button>
+      <button class="action accent" id="exportBtn" disabled><span>⇩</span>EXPORTAR CPK</button>
+      <button class="icon-action" id="helpBtn" title="Ayuda" aria-label="Ayuda">?</button>
+      <button class="icon-action power" id="shutdownBtn" title="Cerrar programa" aria-label="Cerrar programa">×</button>
+    </nav>
+    <input id="fileInput" type="file" hidden>
+    <input id="kitSourceInput" type="file" webkitdirectory directory multiple hidden>
+    <input id="kitTargetInput" type="file" hidden>
+    <input id="teamLogoInput" type="file" accept="image/png" hidden>
+    <input id="importDbInput" type="file" hidden>
+  </header>
+
+  <main class="workspace">
+    <aside class="roster-panel">
+      <div class="panel-head">
+        <div><p class="eyebrow">BASE DE DATOS</p><h1>Jugadores</h1></div>
+        <span class="count-pill" id="resultCount">0</span>
+      </div>
+      <label class="search-box">
+        <span>⌕</span><input id="searchInput" type="search" placeholder="Nombre, ID o equipo…" autocomplete="off">
+      </label>
+      <div class="filters">
+        <select id="teamFilter" aria-label="Filtrar por equipo"><option value="">Todos los equipos</option></select>
+        <select id="tableFilter" aria-label="Filtrar por tabla">
+          <option value="">Todas las tablas</option><option value="Player">Player</option><option value="Player4">Player4</option>
+        </select>
+      </div>
+      <div class="player-list" id="playerList" role="listbox" aria-label="Jugadores"></div>
+      <div class="pager">
+        <button id="prevPage" disabled>‹</button><span id="pageLabel">Página 1 / 1</span><button id="nextPage" disabled>›</button>
+      </div>
+    </aside>
+
+    <section class="editor-panel">
+      <div class="stadium-lines" aria-hidden="true"></div>
+      <div class="empty-state" id="emptyState">
+        <div class="ball-orbit"><span>DFP</span></div>
+        <p class="eyebrow">DESTINY FOOTBALL PROJECT</p>
+        <h2>Tu database, bajo control.</h2>
+        <p>Carga <b>Resource_02.cpk</b> para editar, crear, reemplazar slots y realizar traspasos sin tocar el archivo original.</p>
+        <button class="big-load" id="emptyLoadBtn">SELECCIONAR RESOURCE_02.CPK</button>
+        <small>Todo se procesa de forma local en este dispositivo.</small>
+      </div>
+
+      <div class="editor hidden" id="editor">
+        <div class="player-hero">
+          <button type="button" class="mobile-back" id="mobileBack" aria-label="Volver a la lista de jugadores">‹</button>
+          <div class="avatar"><span id="avatarInitials">--</span><i id="positionBadge">--</i></div>
+          <div class="hero-copy">
+            <p class="eyebrow" id="recordType">PLAYER.BIN</p>
+            <h2 id="heroName">Selecciona un jugador</h2>
+            <div class="hero-meta"><span id="heroId">ID —</span><span id="heroNation">—</span><span id="heroTeam">Sin equipo</span></div>
+          </div>
+          <div class="overall"><small>MEDIA</small><strong id="overallValue">--</strong><span id="dirtyBadge">SIN CAMBIOS</span></div>
+        </div>
+
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="identity">IDENTIDAD</button>
+          <button class="tab" data-tab="stats">ESTADÍSTICAS</button>
+          <button class="tab" data-tab="positions">POSICIONES</button>
+          <button class="tab" data-tab="squad">PLANTILLA Y DORSAL</button>
+        </div>
+
+        <form id="playerForm" autocomplete="off">
+          <section class="tab-page active" data-page="identity">
+            <div class="section-title"><div><p class="eyebrow">DATOS DEL JUGADOR</p><h3>Identidad</h3></div><span>Los cambios no se aplican hasta pulsar Guardar</span></div>
+            <div class="form-grid identity-grid">
+              <label><span>Nombre visible</span><input name="display_name" maxlength="60" required></label>
+              <label><span>Nombre en camiseta</span><input name="shirt_name" maxlength="24" required></label>
+              <label class="wide"><span>Nombre completo</span><input name="full_name" maxlength="60" required></label>
+              <label><span>Nacionalidad</span><select name="nationality" id="countrySelect"></select></label>
+              <label><span>Posición registrada</span><select name="position" id="positionSelect"></select></label>
+              <label><span>Edad</span><input name="age" type="number" min="15" max="78"></label>
+              <label><span>Altura (cm)</span><input name="height" type="number" min="100" max="255"></label>
+              <label><span>Peso (kg)</span><input name="weight" type="number" min="30" max="157"></label>
+              <label><span>Pie dominante</span><select name="strong_foot"><option value="0">Derecho</option><option value="1">Izquierdo</option></select></label>
+              <label><span>Regularidad</span><input name="form" type="number" min="1" max="8"></label>
+              <label><span>Uso pierna mala</span><input name="weak_use" type="number" min="1" max="4"></label>
+              <label><span>Precisión pierna mala</span><input name="weak_accuracy" type="number" min="1" max="4"></label>
+              <label><span>Resistencia a lesiones</span><input name="injury_resistance" type="number" min="1" max="4"></label>
+            </div>
+          </section>
+
+          <section class="tab-page" data-page="stats">
+            <div class="section-title"><div><p class="eyebrow">VALORES 40–99</p><h3>Estadísticas</h3></div><span id="statHint">Ajuste fino o por grupos</span></div>
+            <div class="quick-stats">
+              <button type="button" data-preset="all+1">TODAS +1</button><button type="button" data-preset="all-1">TODAS −1</button>
+              <button type="button" data-preset="elite">BASE ÉLITE</button><button type="button" data-preset="reset">RESTAURAR</button>
+            </div>
+            <div class="stats-grid" id="statsGrid"></div>
+          </section>
+
+          <section class="tab-page" data-page="positions">
+            <div class="section-title"><div><p class="eyebrow">APTITUD POR ZONA</p><h3>Posiciones jugables</h3></div><span>C = 0 · B = 1 · A = 2</span></div>
+            <div class="pitch">
+              <div class="pitch-markings"></div>
+              <div id="positionNodes"></div>
+            </div>
+            <p class="pitch-note">La posición registrada principal se cambia en Identidad. Aquí se define la compatibilidad del jugador en cada zona.</p>
+          </section>
+
+          <section class="tab-page" data-page="squad">
+            <div class="section-title"><div><p class="eyebrow">INSCRIPCIONES</p><h3>Equipo, dorsal y traspasos</h3></div><button type="button" class="mini-action" id="addTransferBtn">TRASPASAR / INSCRIBIR</button></div>
+            <div id="assignmentList" class="assignment-list"></div>
+            <div class="transfer-card">
+              <div><p class="eyebrow">OPERACIÓN</p><h4 id="transferTitle">Editar inscripción seleccionada</h4></div>
+              <div class="transfer-fields">
+                <label><span>Inscripción</span><select id="assignmentSelect"></select></label>
+                <label class="grow"><span id="transferTeamLabel">Nuevo equipo</span><div class="team-picker" id="transferTeamPicker"><input id="transferTeamSearch" type="search" placeholder="Buscar equipo o ID…" autocomplete="off"><input id="transferTeam" type="hidden"><div class="team-results hidden" id="transferTeamResults"></div></div></label>
+                <label><span>Dorsal</span><input id="transferShirt" type="number" min="1" max="99" value="1"></label>
+                <label><span>Orden</span><input id="transferOrder" type="number" min="0" max="63" value="0"></label>
+                <button type="button" class="transfer-button" id="transferBtn">APLICAR TRASPASO</button>
+                <button type="button" class="transfer-button release-button" id="releaseBtn" title="Elimina la inscripción de club seleccionada; el jugador queda como libre">MOVER A JUGADORES LIBRES</button>
+              </div>
+            </div>
+          </section>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span class="status-dot" id="statusDot"></span><span id="statusText">Listo para cargar Resource_02.cpk</span>
+    <span class="status-spacer"></span><span id="summaryText">Sin base cargada</span>
+  </footer>
+</div>
+
+<div class="modal-backdrop hidden lineup-backdrop" id="lineupModal" role="dialog" aria-modal="true" aria-labelledby="lineupTitle">
+  <div class="modal lineup-modal">
+    <header class="lineup-toolbar">
+      <div class="lineup-brand"><p class="eyebrow">PES TEAM EDITOR</p><h2 id="lineupTitle">Alineación y convocatoria</h2></div>
+      <label class="lineup-control team-control"><span>Equipo o selección</span><div class="team-picker" id="lineupTeamPicker"><input id="lineupTeamSearch" type="search" placeholder="Buscar entre todos los equipos…" autocomplete="off"><input id="lineupTeam" type="hidden"><div class="team-results hidden" id="lineupTeamResults"></div></div></label>
+      <label class="lineup-control formation-control"><span>Formación</span><select id="lineupFormation"><option value="">Conservar actual</option></select></label>
+      <button type="button" class="lineup-action" id="autoSortBtn">✦ AUTOSORT</button>
+      <button type="button" class="lineup-action primary" id="saveLineupBtn">✓ GUARDAR</button>
+      <button type="button" class="lineup-close" id="closeLineupBtn" aria-label="Cerrar">×</button>
+    </header>
+
+    <div class="lineup-summary">
+      <div><p class="eyebrow" id="lineupKind">EQUIPO</p><h3 id="lineupTeamName">Selecciona un equipo</h3></div>
+      <div class="lineup-badges"><span id="lineupFormationName">—</span><span id="lineupCount">0 jugadores</span><b id="lineupDirty">SIN CAMBIOS</b></div>
+    </div>
+
+    <div class="lineup-workspace">
+      <section class="tactical-board">
+        <div class="tactical-pitch" id="lineupPitch"><div class="pitch-lines"></div></div>
+        <p>Los primeros 11 son titulares. Pulsa dos jugadores —en el campo o la lista— para intercambiarlos.</p>
+      </section>
+      <section class="squad-board">
+        <div class="squad-title"><div><p class="eyebrow">ORDEN DE PLANTILLA</p><h3>Titulares, banca y reservas</h3></div><span id="swapHint">ELIGE DOS JUGADORES</span></div>
+        <div class="lineup-roster" id="lineupRoster"></div>
+      </section>
+    </div>
+
+    <section class="callup-panel hidden" id="callupPanel">
+      <div class="callup-heading"><div><p class="eyebrow">SELECCIÓN NACIONAL</p><h3>Convocar jugadores</h3><span>El club del jugador se conserva. La nacionalidad se valida antes de inscribirlo.</span></div><label class="callup-search"><span>Buscar por nombre, ID o club</span><input id="callupSearch" type="search" placeholder="Ej. James Rodríguez, 41581 o São Paulo…" autocomplete="off"></label></div>
+      <div class="callup-results" id="callupResults"><div class="callup-empty">Escribe un nombre, ID o club para buscar candidatos.</div></div>
+    </section>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden lineup-backdrop" id="teamManagerModal" role="dialog" aria-modal="true" aria-labelledby="teamManagerTitle">
+  <div class="modal team-manager-modal">
+    <header class="lineup-toolbar team-manager-toolbar">
+      <div class="lineup-brand"><p class="eyebrow">DFP TEAM & KIT MANAGER</p><h2 id="teamManagerTitle">Crear equipo completo</h2></div>
+      <label class="lineup-control team-control"><span>Slot de club que se sustituirá</span><div class="team-picker" id="adminTeamPicker"><input id="adminTeamSearch" type="search" placeholder="Buscar club o Team ID…" autocomplete="off"><input id="adminTeam" type="hidden"><div class="team-results hidden" id="adminTeamResults"></div></div></label>
+      <button type="button" class="lineup-action" id="saveTeamBtn">✓ GUARDAR EQUIPO</button>
+      <button type="button" class="lineup-action primary" id="exportTeamPackBtn">⇩ EXPORTAR PAQUETE</button>
+      <button type="button" class="lineup-close" id="closeTeamManagerBtn" aria-label="Cerrar">×</button>
+    </header>
+
+    <div class="team-manager-grid">
+      <section class="team-card team-identity-card">
+        <div class="team-card-title"><p class="eyebrow">SUSTITUCIÓN SEGURA</p><h3>Identidad del nuevo club</h3></div>
+        <div class="team-slot-banner"><span>TEAM ID</span><strong id="adminTeamId">—</strong><small id="adminTeamTable">Selecciona el club que vas a reemplazar</small></div>
+        <div class="form-grid team-form-grid">
+          <label class="wide"><span>Nombre completo</span><input id="adminTeamName" maxlength="60" placeholder="Ej. Deportivo Destiny FC"></label>
+          <label><span>Abreviatura</span><input id="adminTeamAbbr" maxlength="3" placeholder="DDF"></label>
+          <label><span>Plantilla actual</span><input id="adminRosterCount" disabled value="—"></label>
+        </div>
+        <div class="warning-box"><b>La forma más compatible</b><span id="adminSlotNote">El programa conserva la liga, región, competiciones, Team ID y enlaces del equipo sustituido. Para “Otros de Europa” u “Otros de Latinoamérica”, elige aquí un club que ya esté en esa zona.</span></div>
+      </section>
+
+      <section class="team-card">
+        <div class="team-card-title"><p class="eyebrow">P1 · P2 · P3 · G1 · G2</p><h3>Kits del equipo</h3></div>
+        <p class="team-card-copy">Selecciona la carpeta principal. El programa detecta las cinco carpetas, reúne todos sus archivos directamente en <b>uniform/team/&lt;ID&gt;/</b> y cambia el ID de cada uniforme.</p>
+        <button type="button" class="asset-pick" id="pickKitFolderBtn"><span>＋</span><b>SELECCIONAR CARPETA DE KITS</b><small>Admite p1, p2, p3, g1 y g2 juntas</small></button>
+        <div class="slot-chips" id="kitSlotChips"><span>Sin carpeta cargada</span></div>
+        <div class="asset-summary" id="kitSourceSummary">0 archivos preparados</div>
+      </section>
+
+      <section class="team-card">
+        <div class="team-card-title"><p class="eyebrow">DESTINO OPCIONAL</p><h3>CPK de uniformes</h3></div>
+        <p class="team-card-copy">Si cargas tu CPK, se reemplazan directamente las rutas que ya existan. Los slots nuevos se incluyen también en la carpeta overlay para reempaquetar.</p>
+        <button type="button" class="asset-pick" id="pickKitCpkBtn"><span>◇</span><b>CARGAR CPK DE KITS</b><small>El original nunca se sobrescribe</small></button>
+        <div class="asset-loaded hidden" id="kitCpkLoaded"><b id="kitCpkName">—</b><button type="button" id="clearKitCpkBtn">QUITAR</button></div>
+        <button type="button" class="asset-pick secondary-asset" id="pickExtractedKitFolderBtn"><span>▤</span><b>USAR CPK YA EXTRAÍDO</b><small>Inserta automáticamente los archivos y crea backup</small></button>
+        <div class="asset-loaded hidden" id="extractedKitFolderLoaded"><b id="extractedKitFolderName">—</b><button type="button" id="clearExtractedKitFolderBtn">QUITAR</button></div>
+      </section>
+
+      <section class="team-card team-logo-card">
+        <div class="team-card-title"><p class="eyebrow">ESCUDO DEL CLUB</p><h3>Logo PNG</h3></div>
+        <div class="logo-workbench">
+          <div class="logo-preview" id="teamLogoPreview"><span>PNG</span></div>
+          <div><p>Usa un PNG cuadrado y transparente. Se crearán automáticamente las variantes de <b>128, 256 y 512 px</b> con el Team ID.</p><button type="button" class="mini-action" id="pickTeamLogoBtn">SELECCIONAR LOGO</button><small id="teamLogoStatus">Sin logo cargado</small></div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="team-manager-footer"><span id="teamPackStatus">Selecciona un club para comenzar.</span><b>El botón de exportación permanece arriba para que siempre sea visible.</b></footer>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden lineup-backdrop" id="teamImportModal" role="dialog" aria-modal="true" aria-labelledby="teamImportTitle">
+  <div class="modal team-import-modal">
+    <header class="lineup-toolbar import-toolbar">
+      <div class="lineup-brand"><p class="eyebrow">DFP CROSS-DATABASE</p><h2 id="teamImportTitle">Importar equipo</h2></div>
+      <button type="button" class="lineup-action" id="loadImportDbBtn">＋ CARGAR DATABASE EXTERNA</button>
+      <button type="button" class="lineup-action" id="previewTeamImportBtn" disabled>⌕ ANALIZAR IMPORTACIÓN</button>
+      <button type="button" class="lineup-action primary" id="applyTeamImportBtn" disabled>✓ IMPORTAR EQUIPO</button>
+      <button type="button" class="lineup-close" id="closeTeamImportBtn" aria-label="Cerrar">×</button>
+    </header>
+
+    <div class="import-db-strip">
+      <div><p class="eyebrow">DATABASE DE ORIGEN</p><strong id="importDbName">Ninguna database externa cargada</strong><small id="importDbSummary">Carga el Resource_02 del otro parche; el archivo original no se modificará.</small></div>
+      <button type="button" id="clearImportDbBtn" disabled>QUITAR DATABASE</button>
+    </div>
+
+    <div class="import-selection-grid">
+      <section class="import-select-card source-card">
+        <p class="eyebrow">1 · EQUIPO DE ORIGEN</p><h3>Club que quieres copiar</h3>
+        <label class="lineup-control"><span>Buscar en la database externa</span><div class="team-picker" id="importSourceTeamPicker"><input id="importSourceTeamSearch" type="search" placeholder="Ej. Racing Club o Team ID…" autocomplete="off"><input id="importSourceTeam" type="hidden"><div class="team-results hidden" id="importSourceTeamResults"></div></div></label>
+        <small>Se leerán su plantilla, dorsales, estadísticas, apariencias y formación.</small>
+      </section>
+      <section class="import-select-card target-card">
+        <p class="eyebrow">2 · SLOT DE DESTINO</p><h3>Club de Destiny que se sustituirá</h3>
+        <label class="lineup-control"><span>Buscar entre los clubes de Destiny</span><div class="team-picker" id="importTargetTeamPicker"><input id="importTargetTeamSearch" type="search" placeholder="Buscar club o Team ID…" autocomplete="off"><input id="importTargetTeam" type="hidden"><div class="team-results hidden" id="importTargetTeamResults"></div></div></label>
+        <small>El Team ID, la liga, la región y las competiciones del slot se conservarán.</small>
+      </section>
+    </div>
+
+    <section class="import-preview">
+      <div class="import-preview-head">
+        <div><p class="eyebrow">VISTA PREVIA SEGURA</p><h3 id="importPreviewTitle">Carga una database y selecciona ambos equipos</h3></div>
+        <div class="import-metrics" id="importMetrics"><span>Sin analizar</span></div>
+      </div>
+      <div class="import-roster-head"><span>JUGADOR EXTERNO</span><span>POSICIÓN / DORSAL</span><span>RESULTADO EN DESTINY</span></div>
+      <div class="import-roster" id="importRoster"><div class="callup-empty">Aquí aparecerá el cruce de jugadores e IDs antes de realizar cualquier cambio.</div></div>
+    </section>
+
+    <footer class="team-manager-footer"><span id="teamImportStatus">La importación completa se guarda como una sola operación y puede deshacerse.</span><b>Faces, kits y logos externos no se copian desde la database.</b></footer>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="createModal" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+  <div class="modal">
+    <button class="modal-close" data-close="createModal" aria-label="Cerrar">×</button>
+    <p class="eyebrow">ALTA SEGURA</p><h2 id="createTitle">Crear jugador</h2>
+    <p class="modal-lead">Se clonará la estructura de un jugador plantilla, asignando un ID libre y una inscripción nueva.</p>
+    <div class="id-recommend"><span>ID recomendado</span><strong id="recommendedId">—</strong><small id="idNote"></small></div>
+    <div class="form-grid">
+      <label><span>ID nuevo</span><input id="newId" type="number" min="1"></label>
+      <label><span>Plantilla (jugador seleccionado)</span><input id="templateName" disabled></label>
+      <label><span>Nombre visible</span><input id="newDisplayName" maxlength="60"></label>
+      <label><span>Camiseta</span><input id="newShirtName" maxlength="24"></label>
+      <label class="wide"><span>Nombre completo</span><input id="newFullName" maxlength="60"></label>
+      <label class="wide"><span id="newTeamLabel">Equipo inicial</span><div class="team-picker" id="newTeamPicker"><input id="newTeamSearch" type="search" placeholder="Buscar equipo o ID…" autocomplete="off"><input id="newTeam" type="hidden"><div class="team-results hidden" id="newTeamResults"></div></div></label>
+      <label><span>Dorsal</span><input id="newShirtNumber" type="number" min="1" max="99" value="1"></label>
+    </div>
+    <div class="modal-actions"><button data-close="createModal">CANCELAR</button><button class="primary" id="confirmCreate">CREAR JUGADOR</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="replaceModal" role="dialog" aria-modal="true" aria-labelledby="replaceTitle">
+  <div class="modal">
+    <button class="modal-close" data-close="replaceModal" aria-label="Cerrar">×</button>
+    <p class="eyebrow">SUPLANTACIÓN CONTROLADA</p><h2 id="replaceTitle">Reemplazar slot</h2>
+    <p class="modal-lead">El ID, el slot y las inscripciones del objetivo se conservan. Se copian stats y datos del jugador plantilla.</p>
+    <div class="swap-visual"><div><small>OBJETIVO</small><strong id="replaceTarget">—</strong></div><b>⇐</b><div><small>PLANTILLA</small><strong id="replaceSource">—</strong></div></div>
+    <label class="modal-search"><span>Buscar jugador plantilla por nombre o ID</span><input id="replaceSearch" type="search" placeholder="Ej. 7511 o Messi"></label>
+    <div class="replace-results" id="replaceResults"></div>
+    <label class="check"><input id="copyAppearance" type="checkbox" checked><span>Copiar también la apariencia cuando ambos registros existan</span></label>
+    <div class="modal-actions"><button data-close="replaceModal">CANCELAR</button><button class="danger" id="confirmReplace" disabled>REEMPLAZAR SLOT</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="modal help-modal">
+    <button class="modal-close" data-close="helpModal" aria-label="Cerrar">×</button>
+    <p class="eyebrow">GUÍA RÁPIDA</p><h2 id="helpTitle">Flujo recomendado</h2>
+    <ol class="help-steps">
+      <li><b>Haz una copia de seguridad</b><span>El programa nunca sobrescribe el CPK cargado, pero conserva siempre tu original.</span></li>
+      <li><b>Carga Resource_02.cpk</b><span>El análisis valida el contenedor y todas las tablas necesarias.</span></li>
+      <li><b>Edita, alinea, convoca o importa</b><span>También puedes cruzar otra Resource_02 e importar un club completo con vista previa de IDs.</span></li>
+      <li><b>Exporta</b><span>Se crea un CPK nuevo y se vuelve a abrir internamente para verificarlo.</span></li>
+    </ol>
+    <div class="warning-box"><b>Importante para PS4</b><span>Reemplazar un slot existente suele ofrecer mayor compatibilidad que añadir IDs nuevos. Los IDs “libres” se comprueban en las tablas del parche; el motor puede reservar rangos propios.</span></div>
+    <div class="modal-actions"><button class="primary" data-close="helpModal">ENTENDIDO</button></div>
+  </div>
+</div>
+
+<div id="toastArea" class="toast-area" aria-live="polite"></div>
+<div id="busy" class="busy hidden"><div class="spinner"></div><strong id="busyText">Procesando…</strong></div>
+<script src="bridge.js"></script>
+<script src="static/app.js"></script>
+</body>
+</html>

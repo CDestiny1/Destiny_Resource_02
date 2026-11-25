@@ -1,0 +1,14 @@
+{
+  "name": "Destiny Database Manager",
+  "short_name": "Destiny DB",
+  "description": "Editor de database para PES, funciona en el navegador sin servidor",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff5fa2",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
